@@ -3,6 +3,7 @@ bring "cdktf" as cdktf;
 bring cloud;
 bring aws;
 bring "./websockets.types.w" as types;
+bring "./ws.w" as ws;
 
 struct WebSocketRequestContext {
   routeKey: str;
@@ -20,14 +21,14 @@ struct WebSocketResponse {
   body: str?;
 }
 
-pub class WebSocketApi impl types.IWebsocketsApi {
+pub class WebSocketApi impl types.IWebSocketApi {
   api: awsProvider.apigatewayv2Api.Apigatewayv2Api;
   stage: awsProvider.apigatewayv2Stage.Apigatewayv2Stage;
   apiEndpoint: str;
   wsEndpoint: str;
   init() {
     this.api = new awsProvider.apigatewayv2Api.Apigatewayv2Api(
-      name: "wing-websocket-tunnels", 
+      name: "wing-websocket", 
       protocolType: "WEBSOCKET", 
       routeSelectionExpression: "\$request.body.action"
     );
@@ -38,8 +39,8 @@ pub class WebSocketApi impl types.IWebsocketsApi {
       autoDeploy: true
     );
 
-    this.apiEndpoint = "https://${this.api.id}.execute-api.us-east-1.amazonaws.com/${this.stage.id}";
     this.wsEndpoint = this.stage.invokeUrl;
+    this.apiEndpoint = cdktf.Fn.replace(this.stage.invokeUrl, "wss://", "https://");
   }
 
   pub onConnect(fn: inflight (str): void) {
@@ -164,7 +165,7 @@ pub class WebSocketApi impl types.IWebsocketsApi {
   }
 
   pub inflight send(connectionId: str, message: str) {
-    WebSocketApi.postToConnection(this.apiEndpoint, connectionId, message);
+    ws.postToConnection(this.apiEndpoint, connectionId, message);
   }
 
   pub inflight url(): str {
@@ -174,7 +175,7 @@ pub class WebSocketApi impl types.IWebsocketsApi {
   pub onLift(host: std.IInflightHost, ops: Array<str>) {
     if let host = aws.Function.from(host) {
       if ops.contains("send") {
-        host.addPolicyStatements(aws.PolicyStatement {
+        host.addPolicyStatements({
           actions: ["execute-api:*"],
           resources: ["${this.api.executionArn}/*"],
           effect: aws.Effect.ALLOW,
@@ -182,6 +183,4 @@ pub class WebSocketApi impl types.IWebsocketsApi {
       }
     }
   }
-
-  extern "./post-to-connection.js" static inflight postToConnection(endpoint: str, connectionId: str, data: str);
 }

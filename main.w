@@ -1,6 +1,7 @@
 bring ex;
 bring util;
 bring "./websockets.w" as websockets;
+bring "./ws.w" as ws;
 
 let connections = new ex.Table(name: "connections", primaryKey: "connectionId", columns: {
   connectionId: ex.ColumnType.STRING
@@ -24,21 +25,9 @@ wss.onMessage(inflight (connectionId: str, message: str) => {
 
 wss.initialize();
 
-interface WebsocketTestClient {
-  inflight send(message: str);
-  inflight messages(): Array<str>;
-  inflight close();
-}
-
-class Util {
-  extern "./websockets-client.js" pub static inflight initWebsocket(
-    url: str,
-  ): WebsocketTestClient; 
-}
-
 new std.Test(inflight () => {
-  let client1 = Util.initWebsocket(wss.url());
-  let client2 = Util.initWebsocket(wss.url());
+  let client1 = ws.startClient(wss.url());
+  let client2 = ws.startClient(wss.url());
   
   util.waitUntil(inflight () => {
     return connections.list().length == 2;

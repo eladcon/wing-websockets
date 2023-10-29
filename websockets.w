@@ -4,8 +4,8 @@ bring "./websockets.types.w" as types;
 bring "./websockets.sim.w" as websockets_sim;
 bring "./websockets.aws.w" as websockets_aws;
 
-pub class WebSocketApi impl types.IWebsocketsApi {
-  api: types.IWebsocketsApi;
+pub class WebSocketApi impl types.IWebSocketApi {
+  api: types.IWebSocketApi;
   init() {
     let target = util.env("WING_TARGET");
 

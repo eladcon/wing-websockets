@@ -1,14 +1,9 @@
 bring cloud;
-bring util;
 bring sim;
 bring "./websockets.types.w" as types;
+bring "./ws.w" as ws;
 
-interface StartWebSocketApiResult {
-  inflight close(): inflight(): void;
-  inflight url(): str;
-}
-
-pub class WebSocketApi impl types.IWebsocketsApi {
+pub class WebSocketApi impl types.IWebSocketApi {
   var connectFn: inflight (str): void;
   var disconnectFn: inflight (str): void;
   var onmessageFn: inflight (str, str): void;
@@ -36,7 +31,7 @@ pub class WebSocketApi impl types.IWebsocketsApi {
   // TODO: https://github.com/winglang/wing/issues/4324
   pub initialize() {
     new cloud.Service(inflight () => {
-      let res = WebSocketApi.startWebSocketApi(this.connectFn, this.disconnectFn, this.onmessageFn);
+      let res = ws.startServer(this.connectFn, this.disconnectFn, this.onmessageFn);
       this._url.set("service_url", res.url());
       return () => {
         res.close();
@@ -45,20 +40,10 @@ pub class WebSocketApi impl types.IWebsocketsApi {
   }
 
   pub inflight send(connectionId: str, message: str) {
-    WebSocketApi.sendMessage(connectionId, message);
+    ws.sendMessage(connectionId, message);
   }
 
   pub inflight url(): str {
     return this._url.get("service_url").asStr();
   }
-
-  extern "./websockets-api-local.js" static inflight startWebSocketApi(
-    connectFn: inflight (str): void,
-    disconnectFn: inflight (str): void,
-    onmessageFn: inflight (str, str): void
-  ): StartWebSocketApiResult;
-  extern "./websockets-api-local.js" static inflight sendMessage(
-    connectionId: str,
-    message: str,
-  ): inflight(): void;
 }
